@@ -1,9 +1,8 @@
 use std::collections::VecDeque;
-use std::io;
 
 #[derive(Debug)]
-pub struct Node {
-    pub value: i32,
+struct Node {
+    value: i32,
     left: Option<Box<Node>>,
     right: Option<Box<Node>>,
 }
@@ -43,7 +42,7 @@ impl BinarySearchTree {
                 node.right = Some(Box::new(Node::new(value)));
                 break;
             } else if value == node.value {
-                println!("Value already exists, it won't be inserted.");
+                println!("Value already exists. It will not be inserted.");
                 break;
             } else if value > node.value {
                 current = node.right.as_mut();
@@ -53,7 +52,7 @@ impl BinarySearchTree {
         }
     }
 
-    pub fn search(&self, value: i32) -> Option<&Node> {
+    pub fn search(&self, value: i32) -> bool {
         let mut current = self.root.as_deref();
 
         while let Some(node) = current {
@@ -62,11 +61,11 @@ impl BinarySearchTree {
             } else if value > node.value {
                 current = node.right.as_deref();
             } else {
-                return Some(node);
+                return true;
             }
         }
 
-        None
+        false
     }
 
     pub fn calculate_height(&self) -> i32 {
@@ -79,6 +78,7 @@ impl BinarySearchTree {
             Some(node) => {
                 let left_height = Self::calculate_height_node(node.left.as_deref());
                 let right_height = Self::calculate_height_node(node.right.as_deref());
+
                 1 + left_height.max(right_height)
             }
         }
@@ -111,6 +111,7 @@ impl BinarySearchTree {
             }
 
             let successor_value = Self::smallest_value(node.right.as_deref().unwrap());
+
             node.value = successor_value;
             node.right = Self::remove_node(node.right.take(), successor_value);
 
@@ -122,6 +123,7 @@ impl BinarySearchTree {
         while let Some(left) = node.left.as_deref() {
             node = left;
         }
+
         node.value
     }
 
@@ -139,6 +141,7 @@ impl BinarySearchTree {
 
     pub fn print_by_level(&self) {
         if self.root.is_none() {
+            println!("Tree is empty.");
             return;
         }
 
@@ -180,14 +183,4 @@ impl BinarySearchTree {
             print!(" ");
         }
     }
-}
-
-pub fn read_i32() -> Result<i32, String> {
-    let mut input = String::new();
-
-    io::stdin()
-        .read_line(&mut input)
-        .map_err(|e| e.to_string())?;
-
-    input.trim().parse::<i32>().map_err(|e| e.to_string())
 }
