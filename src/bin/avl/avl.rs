@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::io::{self, Write};
 
 #[derive(Debug)]
 struct Node {
@@ -13,96 +12,28 @@ impl Node {
     fn new(key: i32) -> Self {
         Self {
             key,
+            height: 1,
             left: None,
             right: None,
-            height: 1,
         }
     }
 }
 
-struct AVLTree {
+pub struct AVLTree {
     root: Option<Box<Node>>,
 }
 
 impl AVLTree {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { root: None }
     }
 
-    fn calculate_height(&self) -> i32 {
-        Self::calculate_height_node(self.root.as_deref())
-    }
-
-    fn calculate_height_node(node: Option<&Node>) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => {
-                let left_height = Self::calculate_height_node(n.left.as_deref());
-                let right_height = Self::calculate_height_node(n.right.as_deref());
-                1 + left_height.max(right_height)
-            }
-        }
-    }
-
-    fn height(node: Option<&Node>) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => n.height,
-        }
-    }
-
-    fn rotate_left(mut node: Box<Node>) -> Box<Node> {
-        let mut temp = node
-            .right
-            .take()
-            .expect("rotate_left exige filho direito");
-
-        let temp2 = temp.left.take();
-
-        temp.left = Some(node);
-        temp.left.as_mut().unwrap().right = temp2;
-
-        Self::update_height(temp.left.as_mut().unwrap());
-        Self::update_height(&mut temp);
-
-        temp
-    }
-
-    fn rotate_right(mut node: Box<Node>) -> Box<Node> {
-        let mut temp = node
-            .left
-            .take()
-            .expect("rotate_right exige filho esquerdo");
-
-        let temp2 = temp.right.take();
-
-        temp.right = Some(node);
-        temp.right.as_mut().unwrap().left = temp2;
-
-        Self::update_height(temp.right.as_mut().unwrap());
-        Self::update_height(&mut temp);
-
-        temp
-    }
-
-    fn update_height(node: &mut Node) {
-        node.height = 1 + Self::height(node.left.as_deref())
-            .max(Self::height(node.right.as_deref()));
-    }
-
-    fn get_balance_factor(node: Option<&Node>) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => Self::height(n.left.as_deref()) - Self::height(n.right.as_deref()),
-        }
-    }
-
-    fn search(&self, key: i32) -> Option<&Node> {
+    pub fn search(&self, key: i32) -> bool {
         let mut current = self.root.as_deref();
 
         while let Some(node) = current {
-            if node.key == key {
-                return Some(node);
+            if key == node.key {
+                return true;
             }
 
             if key > node.key {
@@ -112,10 +43,10 @@ impl AVLTree {
             }
         }
 
-        None
+        false
     }
 
-    fn insert(&mut self, key: i32) {
+    pub fn insert(&mut self, key: i32) {
         self.root = Some(Self::insert_node(self.root.take(), key));
     }
 
@@ -129,6 +60,7 @@ impl AVLTree {
         } else if key > node.key {
             node.right = Some(Self::insert_node(node.right.take(), key));
         } else {
+            println!("Value already exists. It will not be inserted.");
             return node;
         }
 
@@ -157,7 +89,7 @@ impl AVLTree {
         node
     }
 
-    fn remove(&mut self, value: i32) {
+    pub fn remove(&mut self, value: i32) {
         self.root = Self::remove_node(self.root.take(), value);
     }
 
@@ -182,6 +114,7 @@ impl AVLTree {
             }
 
             let successor_key = Self::smallest_value(node.right.as_deref().unwrap());
+
             node.key = successor_key;
             node.right = Self::remove_node(node.right.take(), successor_key);
         }
@@ -219,7 +152,76 @@ impl AVLTree {
         node.key
     }
 
-    fn print_tree(&self) {
+    pub fn calculate_height(&self) -> i32 {
+        Self::calculate_height_node(self.root.as_deref())
+    }
+
+    fn calculate_height_node(node: Option<&Node>) -> i32 {
+        match node {
+            None => 0,
+            Some(n) => {
+                let left_height = Self::calculate_height_node(n.left.as_deref());
+                let right_height = Self::calculate_height_node(n.right.as_deref());
+
+                1 + left_height.max(right_height)
+            }
+        }
+    }
+
+    fn height(node: Option<&Node>) -> i32 {
+        match node {
+            None => 0,
+            Some(n) => n.height,
+        }
+    }
+
+    fn update_height(node: &mut Node) {
+        node.height = 1 + Self::height(node.left.as_deref())
+            .max(Self::height(node.right.as_deref()));
+    }
+
+    fn get_balance_factor(node: Option<&Node>) -> i32 {
+        match node {
+            None => 0,
+            Some(n) => Self::height(n.left.as_deref()) - Self::height(n.right.as_deref()),
+        }
+    }
+
+    fn rotate_left(mut node: Box<Node>) -> Box<Node> {
+        let mut temp = node
+            .right
+            .take()
+            .expect("rotate_left requires a right child");
+
+        let temp2 = temp.left.take();
+
+        temp.left = Some(node);
+        temp.left.as_mut().unwrap().right = temp2;
+
+        Self::update_height(temp.left.as_mut().unwrap());
+        Self::update_height(&mut temp);
+
+        temp
+    }
+
+    fn rotate_right(mut node: Box<Node>) -> Box<Node> {
+        let mut temp = node
+            .left
+            .take()
+            .expect("rotate_right requires a left child");
+
+        let temp2 = temp.right.take();
+
+        temp.right = Some(node);
+        temp.right.as_mut().unwrap().left = temp2;
+
+        Self::update_height(temp.right.as_mut().unwrap());
+        Self::update_height(&mut temp);
+
+        temp
+    }
+
+    pub fn print_tree(&self) {
         Self::print_tree_node(self.root.as_deref());
     }
 
@@ -231,8 +233,9 @@ impl AVLTree {
         }
     }
 
-    fn print_by_level(&self) {
+    pub fn print_by_level(&self) {
         if self.root.is_none() {
+            println!("Tree is empty.");
             return;
         }
 
@@ -274,14 +277,4 @@ impl AVLTree {
             print!(" ");
         }
     }
-}
-
-fn read_i32() -> Result<i32, String> {
-    let mut input = String::new();
-
-    io::stdin()
-        .read_line(&mut input)
-        .map_err(|e| e.to_string())?;
-
-    input.trim().parse::<i32>().map_err(|e| e.to_string())
 }
