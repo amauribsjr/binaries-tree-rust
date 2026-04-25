@@ -153,19 +153,7 @@ impl AVLTree {
     }
 
     pub fn calculate_height(&self) -> i32 {
-        Self::calculate_height_node(self.root.as_deref())
-    }
-
-    fn calculate_height_node(node: Option<&Node>) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => {
-                let left_height = Self::calculate_height_node(n.left.as_deref());
-                let right_height = Self::calculate_height_node(n.right.as_deref());
-
-                1 + left_height.max(right_height)
-            }
-        }
+        self.root.as_ref().map_or(0, |n| n.height)
     }
 
     fn height(node: Option<&Node>) -> i32 {
