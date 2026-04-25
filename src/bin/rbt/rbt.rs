@@ -1,14 +1,17 @@
 use std::collections::VecDeque;
 
-const RED: bool = true;
-const BLACK: bool = false;
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Color {
+    Red,
+    Black,
+}
 
 type Link = Option<usize>;
 
 #[derive(Clone, Debug)]
 struct Node {
     key: i32,
-    is_red: bool,
+    color: Color,
     left: Link,
     right: Link,
     parent: Link,
@@ -18,7 +21,7 @@ impl Node {
     fn new(key: i32) -> Self {
         Self {
             key,
-            is_red: RED,
+            color: Color::Red,
             left: None,
             right: None,
             parent: None,
@@ -39,16 +42,16 @@ impl RBT {
         }
     }
 
-    fn color(&self, node: Link) -> bool {
+    fn color(&self, node: Link) -> Color {
         match node {
-            Some(index) => self.nodes[index].is_red,
-            None => BLACK,
+            Some(index) => self.nodes[index].color,
+            None => Color::Black,
         }
     }
 
-    fn set_color(&mut self, node: Link, color: bool) {
+    fn set_color(&mut self, node: Link, color: Color) {
         if let Some(index) = node {
-            self.nodes[index].is_red = color;
+            self.nodes[index].color = color;
         }
     }
 
@@ -64,13 +67,13 @@ impl RBT {
         if self.find_node(key).is_some() {
             return false;
         }
-    
+
         let z = self.nodes.len();
         self.nodes.push(Node::new(key));
-    
+
         let mut y: Link = None;
         let mut x = self.root;
-    
+
         while let Some(x_index) = x {
             y = x;
             if self.nodes[z].key < self.nodes[x_index].key {
@@ -79,9 +82,9 @@ impl RBT {
                 x = self.nodes[x_index].right;
             }
         }
-    
+
         self.nodes[z].parent = y;
-    
+
         if y.is_none() {
             self.root = Some(z);
         } else if self.nodes[z].key < self.nodes[y.unwrap()].key {
@@ -89,23 +92,23 @@ impl RBT {
         } else {
             self.nodes[y.unwrap()].right = Some(z);
         }
-    
+
         self.insert_fixup(z);
         true
     }
 
     fn insert_fixup(&mut self, mut z: usize) {
-        while self.color(self.parent(z)) == RED {
+        while self.color(self.parent(z)) == Color::Red {
             let parent = self.parent(z).unwrap();
             let grandparent = self.grandparent(z).unwrap();
 
             if Some(parent) == self.nodes[grandparent].left {
                 let uncle = self.nodes[grandparent].right;
 
-                if self.color(uncle) == RED {
-                    self.set_color(Some(parent), BLACK);
-                    self.set_color(uncle, BLACK);
-                    self.set_color(Some(grandparent), RED);
+                if self.color(uncle) == Color::Red {
+                    self.set_color(Some(parent), Color::Black);
+                    self.set_color(uncle, Color::Black);
+                    self.set_color(Some(grandparent), Color::Red);
 
                     z = grandparent;
                 } else {
@@ -117,18 +120,18 @@ impl RBT {
                     let parent = self.parent(z).unwrap();
                     let grandparent = self.grandparent(z).unwrap();
 
-                    self.set_color(Some(parent), BLACK);
-                    self.set_color(Some(grandparent), RED);
+                    self.set_color(Some(parent), Color::Black);
+                    self.set_color(Some(grandparent), Color::Red);
 
                     self.rotate_right(grandparent);
                 }
             } else {
                 let uncle = self.nodes[grandparent].left;
 
-                if self.color(uncle) == RED {
-                    self.set_color(Some(parent), BLACK);
-                    self.set_color(uncle, BLACK);
-                    self.set_color(Some(grandparent), RED);
+                if self.color(uncle) == Color::Red {
+                    self.set_color(Some(parent), Color::Black);
+                    self.set_color(uncle, Color::Black);
+                    self.set_color(Some(grandparent), Color::Red);
 
                     z = grandparent;
                 } else {
@@ -140,15 +143,15 @@ impl RBT {
                     let parent = self.parent(z).unwrap();
                     let grandparent = self.grandparent(z).unwrap();
 
-                    self.set_color(Some(parent), BLACK);
-                    self.set_color(Some(grandparent), RED);
+                    self.set_color(Some(parent), Color::Black);
+                    self.set_color(Some(grandparent), Color::Red);
 
                     self.rotate_left(grandparent);
                 }
             }
         }
 
-        self.set_color(self.root, BLACK);
+        self.set_color(self.root, Color::Black);
     }
 
     fn rotate_left(&mut self, x: usize) {
@@ -247,11 +250,11 @@ impl RBT {
 
     pub fn remove(&mut self, key: i32) -> bool {
         let z = self.find_node(key);
-    
+
         if z.is_none() {
             return false;
         }
-    
+
         self.delete(z.unwrap());
         true
     }
@@ -276,7 +279,7 @@ impl RBT {
         let mut y = z;
         let x: Link;
         let x_parent: Link;
-        let mut y_original_color = self.nodes[y].is_red;
+        let mut y_original_color = self.nodes[y].color;
 
         if self.nodes[z].left.is_none() {
             x = self.nodes[z].right;
@@ -290,7 +293,7 @@ impl RBT {
             self.transplant(z, self.nodes[z].left);
         } else {
             y = self.smallest_node(self.nodes[z].right.unwrap());
-            y_original_color = self.nodes[y].is_red;
+            y_original_color = self.nodes[y].color;
             x = self.nodes[y].right;
 
             if self.nodes[y].parent == Some(z) {
@@ -319,16 +322,16 @@ impl RBT {
                 self.nodes[left].parent = Some(y);
             }
 
-            self.nodes[y].is_red = self.nodes[z].is_red;
+            self.nodes[y].color = self.nodes[z].color;
         }
 
-        if y_original_color == BLACK {
+        if y_original_color == Color::Black {
             self.delete_fixup(x, x_parent);
         }
     }
 
     fn delete_fixup(&mut self, mut x: Link, mut x_parent: Link) {
-        while x != self.root && self.color(x) == BLACK {
+        while x != self.root && self.color(x) == Color::Black {
             let Some(parent) = x_parent else {
                 break;
             };
@@ -336,29 +339,30 @@ impl RBT {
             if x == self.nodes[parent].left {
                 let mut w = self.nodes[parent].right;
 
-                if self.color(w) == RED {
-                    self.set_color(w, BLACK);
-                    self.set_color(Some(parent), RED);
+                if self.color(w) == Color::Red {
+                    self.set_color(w, Color::Black);
+                    self.set_color(Some(parent), Color::Red);
                     self.rotate_left(parent);
 
                     w = self.nodes[parent].right;
                 }
 
-                let w_left_black = self.color(w.and_then(|i| self.nodes[i].left)) == BLACK;
-                let w_right_black = self.color(w.and_then(|i| self.nodes[i].right)) == BLACK;
+                let w_left_black = self.color(w.and_then(|i| self.nodes[i].left)) == Color::Black;
+                let w_right_black = self.color(w.and_then(|i| self.nodes[i].right)) == Color::Black;
 
                 if w_left_black && w_right_black {
-                    self.set_color(w, RED);
+                    self.set_color(w, Color::Red);
 
                     x = Some(parent);
                     x_parent = self.nodes[parent].parent;
                 } else {
-                    let w_right_black = self.color(w.and_then(|i| self.nodes[i].right)) == BLACK;
+                    let w_right_black =
+                        self.color(w.and_then(|i| self.nodes[i].right)) == Color::Black;
 
                     if w_right_black {
                         if let Some(w_index) = w {
-                            self.set_color(self.nodes[w_index].left, BLACK);
-                            self.set_color(w, RED);
+                            self.set_color(self.nodes[w_index].left, Color::Black);
+                            self.set_color(w, Color::Red);
                             self.rotate_right(w_index);
                         }
 
@@ -366,9 +370,9 @@ impl RBT {
                     }
 
                     if let Some(w_index) = w {
-                        self.nodes[w_index].is_red = self.nodes[parent].is_red;
-                        self.nodes[parent].is_red = BLACK;
-                        self.set_color(self.nodes[w_index].right, BLACK);
+                        self.nodes[w_index].color = self.nodes[parent].color;
+                        self.nodes[parent].color = Color::Black;
+                        self.set_color(self.nodes[w_index].right, Color::Black);
                     }
 
                     self.rotate_left(parent);
@@ -379,29 +383,30 @@ impl RBT {
             } else {
                 let mut w = self.nodes[parent].left;
 
-                if self.color(w) == RED {
-                    self.set_color(w, BLACK);
-                    self.set_color(Some(parent), RED);
+                if self.color(w) == Color::Red {
+                    self.set_color(w, Color::Black);
+                    self.set_color(Some(parent), Color::Red);
                     self.rotate_right(parent);
 
                     w = self.nodes[parent].left;
                 }
 
-                let w_right_black = self.color(w.and_then(|i| self.nodes[i].right)) == BLACK;
-                let w_left_black = self.color(w.and_then(|i| self.nodes[i].left)) == BLACK;
+                let w_right_black = self.color(w.and_then(|i| self.nodes[i].right)) == Color::Black;
+                let w_left_black = self.color(w.and_then(|i| self.nodes[i].left)) == Color::Black;
 
                 if w_right_black && w_left_black {
-                    self.set_color(w, RED);
+                    self.set_color(w, Color::Red);
 
                     x = Some(parent);
                     x_parent = self.nodes[parent].parent;
                 } else {
-                    let w_left_black = self.color(w.and_then(|i| self.nodes[i].left)) == BLACK;
+                    let w_left_black =
+                        self.color(w.and_then(|i| self.nodes[i].left)) == Color::Black;
 
                     if w_left_black {
                         if let Some(w_index) = w {
-                            self.set_color(self.nodes[w_index].right, BLACK);
-                            self.set_color(w, RED);
+                            self.set_color(self.nodes[w_index].right, Color::Black);
+                            self.set_color(w, Color::Red);
                             self.rotate_left(w_index);
                         }
 
@@ -409,9 +414,9 @@ impl RBT {
                     }
 
                     if let Some(w_index) = w {
-                        self.nodes[w_index].is_red = self.nodes[parent].is_red;
-                        self.nodes[parent].is_red = BLACK;
-                        self.set_color(self.nodes[w_index].left, BLACK);
+                        self.nodes[w_index].color = self.nodes[parent].color;
+                        self.nodes[parent].color = Color::Black;
+                        self.set_color(self.nodes[w_index].left, Color::Black);
                     }
 
                     self.rotate_right(parent);
@@ -422,7 +427,7 @@ impl RBT {
             }
         }
 
-        self.set_color(x, BLACK);
+        self.set_color(x, Color::Black);
     }
 
     fn smallest_node(&self, mut node: usize) -> usize {
@@ -444,7 +449,7 @@ impl RBT {
             print!(
                 "{}{} ",
                 self.nodes[index].key,
-                if self.nodes[index].is_red {
+                if self.nodes[index].color == Color::Red {
                     "[R]"
                 } else {
                     "[B]"
@@ -468,7 +473,7 @@ impl RBT {
 
         for level in 0..height {
             let level_size = queue.len();
-            let spaces = 2_i32.pow((height - level - 1) as u32) - 1;
+            let spaces = (2_i32.pow((height - level - 1) as u32) - 1) as usize;
 
             Self::print_spaces(spaces * 4);
 
@@ -476,7 +481,11 @@ impl RBT {
                 let current = queue.pop_front().unwrap();
 
                 if let Some(index) = current {
-                    let color = if self.nodes[index].is_red { "R" } else { "B" };
+                    let color = if self.nodes[index].color == Color::Red {
+                        "R"
+                    } else {
+                        "B"
+                    };
 
                     print!("{:>3}{}", self.nodes[index].key, color);
 
@@ -496,9 +505,98 @@ impl RBT {
         }
     }
 
-    fn print_spaces(count: i32) {
-        for _ in 0..count {
-            print!(" ");
+    fn print_spaces(count: usize) {
+        print!("{}", " ".repeat(count));
+    }
+}
+
+impl Default for RBT {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insert_and_search() {
+        let mut rbt = RBT::new();
+        assert!(rbt.insert(10));
+        assert!(rbt.insert(5));
+        assert!(rbt.insert(15));
+        assert!(rbt.search(10));
+        assert!(rbt.search(5));
+        assert!(rbt.search(15));
+        assert!(!rbt.search(99));
+    }
+
+    #[test]
+    fn insert_duplicate_returns_false() {
+        let mut rbt = RBT::new();
+        assert!(rbt.insert(10));
+        assert!(!rbt.insert(10));
+    }
+
+    #[test]
+    fn remove_returns_false_when_not_found() {
+        let mut rbt = RBT::new();
+        rbt.insert(10);
+        assert!(!rbt.remove(99));
+    }
+
+    #[test]
+    fn remove_existing_key() {
+        let mut rbt = RBT::new();
+        for i in [10, 5, 15] {
+            rbt.insert(i);
         }
+        assert!(rbt.remove(5));
+        assert!(!rbt.search(5));
+        assert!(rbt.search(10));
+    }
+
+    #[test]
+    fn root_is_always_black() {
+        let mut rbt = RBT::new();
+        for i in [10, 5, 15, 3, 7, 12, 17] {
+            rbt.insert(i);
+            let root_idx = rbt.root.unwrap();
+            assert_eq!(rbt.nodes[root_idx].color, Color::Black);
+        }
+    }
+
+    #[test]
+    fn no_consecutive_red_nodes() {
+        let mut rbt = RBT::new();
+        for i in [10, 5, 15, 3, 7, 12, 17, 1, 4] {
+            rbt.insert(i);
+        }
+        for (idx, node) in rbt.nodes.iter().enumerate() {
+            if node.color == Color::Red {
+                if let Some(left) = node.left {
+                    assert_eq!(
+                        rbt.nodes[left].color,
+                        Color::Black,
+                        "Node {} (Red) has Red left child",
+                        idx
+                    );
+                }
+                if let Some(right) = node.right {
+                    assert_eq!(
+                        rbt.nodes[right].color,
+                        Color::Black,
+                        "Node {} (Red) has Red right child",
+                        idx
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn height_empty_tree() {
+        assert_eq!(RBT::new().calculate_height(), 0);
     }
 }
