@@ -47,9 +47,13 @@ fn main() {
             1 => {
                 print!("Enter node value: ");
                 io::stdout().flush().unwrap();
-
+            
                 match read_i32() {
-                    Ok(value) => avl.insert(value),
+                    Ok(value) => {
+                        if !avl.insert(value) {
+                            println!("Value already exists. It will not be inserted.");
+                        }
+                    }
                     Err(e) => println!("Error: {}", e),
                 }
             }
